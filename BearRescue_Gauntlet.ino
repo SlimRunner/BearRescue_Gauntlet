@@ -1,16 +1,19 @@
-// #include "BearRescue_HackPublisher.hpp"
-#include "BearRescue_Ultrasonic.hpp"
-// #include "BearRescue_Secrets.hpp"
 #include <AM232X.h>
 
-// const char *ssid = SSID;
-// const char *password = PASSWORD;
-// constexpr int ledPin = 13;
+#include "BearRescue_HackPublisher.hpp"
+#include "BearRescue_Ultrasonic.hpp"
+#include "BearRescue_Secrets.hpp"
 
-// HackPublisher publisher("hackers");  // publisher instance for team "hackers"
-// int temp = 0;  // variable that holds the temperature
+const char *ssid = SSID;
+const char *password = PASSWORD;
+constexpr int ledPin = 13;
+
+HackPublisher publisher("hackers");  // publisher instance for team "hackers"
+int temp = 0;  // variable that holds the temperature
 
 AM232X AM2320;
+
+constexpr float C2F = 9 / 5 + 32;
 
 constexpr int buzzerPin = 12;
 constexpr int gasPin = A0;
@@ -53,34 +56,28 @@ void setup() {
   AM2320.wakeUp();
   delay(200);
 
-  // // Connect to wifi
-  // WiFi.begin(ssid, password);
-  // while (WiFi.status() != WL_CONNECTED) {
-  //   delay(500);
-  //   Serial.print(".");
-  // }
+  // Connect to wifi
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
 
-  // // Initialize publisher
-  // publisher.begin();
+  // Initialize publisher
+  publisher.begin();
   introMelody();
 }
 
 void loop() {
+  // make sure ultrasonic sensor is on 5 V
   static UltrasonicSensor ultrasonic(trigPin, echoPin, DistUnit::CENTIMETERS);
-  // publisher.store("ultrasonic", 12.56); // store value for ultrasonic sensor
-  // publisher.store("temp", temp);        // store value for temp
-  // publisher.store("meow", "woof");      // store value for meow
-
-  // publisher.send();                     // send stored data to website
-
-  // temp++;
 
   dist = ultrasonic.readDistance();
   gasVal = analogRead(gasPin);
   status = AM2320.read();
   hum = AM2320.getHumidity();
-  temp = AM2320.getTemperature();
-  // * 9 / 5 + 32
+  temp = AM2320.getTemperature() * C2F;
+
   Serial.print(status);
   Serial.print(", ");
   Serial.print(hum);
@@ -93,5 +90,13 @@ void loop() {
   Serial.print(dist);
   Serial.println(" cm");
 
+  
+  publisher.store("ultrasonic", dist); // store value for ultrasonic sensor
+  publisher.store("humidity", hum);        // store value for temp
+  publisher.store("temp", temp);        // store value for temp
+  publisher.store("gas", gasVal);        // store value for temp
+  // publisher.store("meow", "woof");      // store value for meow
+
+  publisher.send();                     // send stored data to website
   delay(2000);
 }
