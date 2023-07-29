@@ -15,7 +15,7 @@ constexpr int gasPin = A0;
 constexpr int trigPin = 5;
 constexpr int echoPin = 18;
 
-HackPublisher publisher("hackers");  // publisher instance for team "hackers"
+HackPublisher publisher("BearRescue");  // publisher instance for team "hackers"
 AM232X AM2320;
 // make sure ultrasonic sensor is on 5 V
 static UltrasonicSensor ultrasonic(trigPin, echoPin, DistUnit::CENTIMETERS);
@@ -90,7 +90,7 @@ void loop() {
   
   publisher.store("ultrasonic", dist); // store value for ultrasonic sensor
   publisher.store("humidity", hum);        // store value for temp
-  publisher.store("temp", temp);        // store value for temp
+  publisher.store("temperature", temp);        // store value for temp
   publisher.store("gas", gasVal);        // store value for temp
   // publisher.store("meow", "woof");      // store value for meow
 
