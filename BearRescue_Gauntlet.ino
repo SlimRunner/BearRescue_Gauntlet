@@ -8,10 +8,12 @@ const char *ssid = SSID;
 const char *password = PASSWORD;
 constexpr int ledPin = 13;
 
-constexpr float C2F = 9 / 5 + 32;
+float C2F(int t) {
+  return t * 9 / 5 + 32;
+};
 
 constexpr int buzzerPin = 12;
-constexpr int gasPin = A0;
+constexpr int gasPin = A1;
 constexpr int trigPin = 5;
 constexpr int echoPin = 18;
 
@@ -48,6 +50,8 @@ void setup() {
   Serial.begin(115200);
   while (!Serial) continue;
 
+  pinMode(gasPin, INPUT);
+
   if (!AM2320.begin()) {
     Serial.println("Sensor not found");
     while(1);
@@ -62,21 +66,20 @@ void setup() {
     delay(500);
     Serial.print(".");
   }
-
+  
   // Initialize publisher
   publisher.begin();
   introMelody();
 }
 
 void loop() {
-  dist = ultrasonic.readDistance();
   gasVal = analogRead(gasPin);
+  dist = ultrasonic.readDistance();
   status = AM2320.read();
   hum = AM2320.getHumidity();
-  temp = AM2320.getTemperature() * C2F;
+  temp = C2F(AM2320.getTemperature());
 
-  Serial.print(status);
-  Serial.print(", ");
+  Serial.print((!status ? "ok, ": "not ok, "));
   Serial.print(hum);
   Serial.print(" %, ");
   Serial.print(temp);
@@ -86,12 +89,11 @@ void loop() {
   Serial.print(", dist: ");
   Serial.print(dist);
   Serial.println(" cm");
-
   
-  publisher.store("ultrasonic", dist); // store value for ultrasonic sensor
   publisher.store("humidity", hum);        // store value for temp
   publisher.store("temperature", temp);        // store value for temp
   publisher.store("gas", gasVal);        // store value for temp
+  publisher.store("ultrasonic", dist); // store value for ultrasonic sensor
   // publisher.store("meow", "woof");      // store value for meow
 
   publisher.send();                     // send stored data to website
