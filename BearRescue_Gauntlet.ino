@@ -8,17 +8,17 @@ const char *ssid = SSID;
 const char *password = PASSWORD;
 constexpr int ledPin = 13;
 
-HackPublisher publisher("hackers");  // publisher instance for team "hackers"
-int temp = 0;  // variable that holds the temperature
-
-AM232X AM2320;
-
 constexpr float C2F = 9 / 5 + 32;
 
 constexpr int buzzerPin = 12;
 constexpr int gasPin = A0;
 constexpr int trigPin = 5;
 constexpr int echoPin = 18;
+
+HackPublisher publisher("hackers");  // publisher instance for team "hackers"
+AM232X AM2320;
+// make sure ultrasonic sensor is on 5 V
+static UltrasonicSensor ultrasonic(trigPin, echoPin, DistUnit::CENTIMETERS);
 
 int dist;
 int gasVal;
@@ -69,9 +69,6 @@ void setup() {
 }
 
 void loop() {
-  // make sure ultrasonic sensor is on 5 V
-  static UltrasonicSensor ultrasonic(trigPin, echoPin, DistUnit::CENTIMETERS);
-
   dist = ultrasonic.readDistance();
   gasVal = analogRead(gasPin);
   status = AM2320.read();
