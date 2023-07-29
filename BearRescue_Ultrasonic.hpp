@@ -47,6 +47,12 @@ public:
     pinMode(m_echoPin, INPUT);
   }
 
+  UltrasonicSensor(int trigPin, int echoPin, DistUnit unit) : m_trigPin(trigPin), m_echoPin(echoPin) {
+    setConversion(unit);
+    pinMode(m_trigPin, OUTPUT);
+    pinMode(m_echoPin, INPUT);
+  }
+
   float readDistance() {
     // set pin to reset sensor in low
     digitalWrite(m_trigPin, LOW);

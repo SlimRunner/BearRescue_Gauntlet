@@ -1,37 +1,97 @@
-#include "BearRescue_HackPublisher.hpp"
+// #include "BearRescue_HackPublisher.hpp"
 #include "BearRescue_Ultrasonic.hpp"
-#include "BearRescue_Secrets.hpp"
+// #include "BearRescue_Secrets.hpp"
+#include <AM232X.h>
 
-const char *ssid = SSID;
-const char *password = PASSWORD;
-constexpr int ledPin = 13;
+// const char *ssid = SSID;
+// const char *password = PASSWORD;
+// constexpr int ledPin = 13;
 
-HackPublisher publisher("hackers");  // publisher instance for team "hackers"
-int temp = 0;  // variable that holds the temperature
+// HackPublisher publisher("hackers");  // publisher instance for team "hackers"
+// int temp = 0;  // variable that holds the temperature
+
+AM232X AM2320;
+
+constexpr int buzzerPin = 12;
+constexpr int gasPin = A0;
+constexpr int trigPin = 5;
+constexpr int echoPin = 18;
+
+int dist;
+int gasVal;
+int status;
+int hum;
+int temp;
+
+inline float eqlTemp(int note) { return pow(2, note / 12.0) * 440; }
+
+void introMelody() {
+  pinMode(buzzerPin, INPUT);
+  tone(buzzerPin, eqlTemp(2));
+  delay(200);
+  tone(buzzerPin, eqlTemp(0));
+  delay(200);
+  tone(buzzerPin, eqlTemp(4));
+  delay(200);
+  tone(buzzerPin, eqlTemp(7));
+  delay(200);
+  tone(buzzerPin, eqlTemp(12));
+  delay(200);
+  noTone(buzzerPin);
+}
 
 void setup() {
     // Initialize serial communication
   Serial.begin(115200);
   while (!Serial) continue;
 
-  // Connect to wifi
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+  if (!AM2320.begin()) {
+    Serial.println("Sensor not found");
+    while(1);
   }
 
-  // Initialize publisher
-  publisher.begin();
+  AM2320.wakeUp();
+  delay(200);
+
+  // // Connect to wifi
+  // WiFi.begin(ssid, password);
+  // while (WiFi.status() != WL_CONNECTED) {
+  //   delay(500);
+  //   Serial.print(".");
+  // }
+
+  // // Initialize publisher
+  // publisher.begin();
+  introMelody();
 }
 
 void loop() {
-  publisher.store("ultrasonic", 12.56); // store value for ultrasonic sensor
-  publisher.store("temp", temp);        // store value for temp
-  publisher.store("meow", "woof");      // store value for meow
+  static UltrasonicSensor ultrasonic(trigPin, echoPin, DistUnit::CENTIMETERS);
+  // publisher.store("ultrasonic", 12.56); // store value for ultrasonic sensor
+  // publisher.store("temp", temp);        // store value for temp
+  // publisher.store("meow", "woof");      // store value for meow
 
-  publisher.send();                     // send stored data to website
+  // publisher.send();                     // send stored data to website
+
+  // temp++;
+
+  dist = ultrasonic.readDistance();
+  gasVal = analogRead(gasPin);
+  status = AM2320.read();
+  hum = AM2320.getHumidity();
+  temp = AM2320.getTemperature();
+  // * 9 / 5 + 32
+  Serial.print(status);
+  Serial.print(", ");
+  Serial.print(hum);
+  Serial.print(" %, ");
+  Serial.print(temp);
+  Serial.print(" F, ");
+  Serial.print("gas: ");
+  Serial.print(gasVal);
+  Serial.print(", dist: ");
+  Serial.print(dist);
+  Serial.println(" cm");
 
   delay(2000);
-  temp++;
 }
