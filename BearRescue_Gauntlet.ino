@@ -22,7 +22,7 @@ constexpr int LED_PIN = 19;
 constexpr int LED_COUNT = 12;
 constexpr int RING_BRIGHTNESS = 50;
 
-constexpr int GAS_LIMIT = 1200;
+constexpr int GAS_LIMIT = 1800;
 
 const char *ssid = SSID;
 const char *password = PASSWORD;
@@ -82,7 +82,7 @@ void updateDashboard(int h, int t, int g, int d) {
   oled.print("%");
   oled.setCursor(wQuad * 3 - 8, hQuad);
   oled.print(t);
-  oled.print("F");
+  oled.print("C");
   const int gpad = 17 + (g < 1000? 0: 3);
   oled.setCursor(wQuad - 8, hQuad * 3);
   oled.print(g);
@@ -144,14 +144,14 @@ void loop() {
   constexpr int SENSOR_POLL_DELAY = 500;
   static int mainTimeReset = 0; // should never go above 2000
   int currentTime = millis();
-
+  
   if (currentTime - mainTimeReset > SENSOR_POLL_DELAY) {
     mainTimeReset = currentTime;
     gasVal = analogRead(gasPin);
     dist = ultrasonic.readDistance();
     status = AM2320.read();
     hum = AM2320.getHumidity();
-    temp = C2F(AM2320.getTemperature());
+    temp = AM2320.getTemperature();
 
     updateDashboard(hum, temp, gasVal, dist);
 
@@ -161,7 +161,7 @@ void loop() {
     Serial.print(hum);
     Serial.print(" %, ");
     Serial.print(temp);
-    Serial.print(" F, ");
+    Serial.print(" C, ");
     Serial.print("gas: ");
     Serial.print(gasVal);
     Serial.print(", dist: ");
@@ -170,7 +170,7 @@ void loop() {
     #endif
     
     if (gasVal > GAS_LIMIT) {
-      playNote(440);
+      playNote(0);
     } else {
       noTone(buzzerPin);
     }
