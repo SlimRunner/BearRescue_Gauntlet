@@ -39,20 +39,23 @@ int status;
 int hum;
 int temp;
 
-inline float eqlTemp(int note) { return pow(2, note / 12.0) * 440; }
+inline void playNote(int note) {
+  tone(buzzerPin, pow(2, note / 12.0) * 440);
+}
 
 void introMelody() {
+  constexpr int NOTE_DELAY = 200;
   pinMode(buzzerPin, INPUT);
-  tone(buzzerPin, eqlTemp(2));
-  delay(200);
-  tone(buzzerPin, eqlTemp(0));
-  delay(200);
-  tone(buzzerPin, eqlTemp(4));
-  delay(200);
-  tone(buzzerPin, eqlTemp(7));
-  delay(200);
-  tone(buzzerPin, eqlTemp(12));
-  delay(200);
+  playNote(2);
+  delay(NOTE_DELAY);
+  playNote(0);
+  delay(NOTE_DELAY);
+  playNote(4);
+  delay(NOTE_DELAY);
+  playNote(7);
+  delay(NOTE_DELAY);
+  playNote(12);
+  delay(NOTE_DELAY);
   noTone(buzzerPin);
 }
 
