@@ -1,3 +1,5 @@
+// #define _CONSOLE_DEBUG_
+
 #include <AM232X.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
@@ -20,9 +22,10 @@ constexpr int LED_PIN = 19;
 constexpr int LED_COUNT = 12;
 constexpr int RING_BRIGHTNESS = 50;
 
+constexpr int GAS_LIMIT = 1200;
+
 const char *ssid = SSID;
 const char *password = PASSWORD;
-constexpr int ledPin = 13;
 
 float C2F(int t) {
   return t * 9 / 5 + 32;
@@ -32,7 +35,7 @@ Adafruit_NeoPixel ledring(LED_COUNT, LED_PIN, NEO_GRB | NEO_KHZ800);
 Adafruit_SSD1306 oled(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 constexpr int buzzerPin = 12;
-constexpr int gasPin = A1;
+constexpr int gasPin = A2;
 constexpr int trigPin = 5;
 constexpr int echoPin = 18;
 
@@ -48,21 +51,23 @@ int hum;
 int temp;
 
 inline void playNote(int note) {
-  tone(buzzerPin, pow(2, note / 12.0) * 440);
+  tone(buzzerPin, pow(2, note / 12.0) * 880);
 }
 
 void introMelody() {
   constexpr int NOTE_DELAY = 200;
   pinMode(buzzerPin, INPUT);
-  playNote(2);
-  delay(NOTE_DELAY);
-  playNote(0);
-  delay(NOTE_DELAY);
-  playNote(4);
-  delay(NOTE_DELAY);
   playNote(7);
   delay(NOTE_DELAY);
-  playNote(12);
+  playNote(10);
+  delay(NOTE_DELAY);
+  playNote(19);
+  delay(NOTE_DELAY);
+  playNote(15);
+  delay(NOTE_DELAY);
+  playNote(17);
+  delay(NOTE_DELAY);
+  playNote(22);
   delay(NOTE_DELAY);
   noTone(buzzerPin);
 }
@@ -136,31 +141,46 @@ void setup() {
 }
 
 void loop() {
-  gasVal = analogRead(gasPin);
-  dist = ultrasonic.readDistance();
-  status = AM2320.read();
-  hum = AM2320.getHumidity();
-  temp = C2F(AM2320.getTemperature());
+  constexpr int SENSOR_POLL_DELAY = 500;
+  static int mainTimeReset = 0; // should never go above 2000
+  int currentTime = millis();
 
-  updateDashboard(hum, temp, gasVal, dist);
+  if (currentTime - mainTimeReset > SENSOR_POLL_DELAY) {
+    mainTimeReset = currentTime;
+    gasVal = analogRead(gasPin);
+    dist = ultrasonic.readDistance();
+    status = AM2320.read();
+    hum = AM2320.getHumidity();
+    temp = C2F(AM2320.getTemperature());
 
-  Serial.print((!status ? "ok, ": "not ok, "));
-  Serial.print(hum);
-  Serial.print(" %, ");
-  Serial.print(temp);
-  Serial.print(" F, ");
-  Serial.print("gas: ");
-  Serial.print(gasVal);
-  Serial.print(", dist: ");
-  Serial.print(dist);
-  Serial.println(" cm");
-  
-  publisher.store("humidity", hum);        // store value for temp
-  publisher.store("temperature", temp);        // store value for temp
-  publisher.store("gas", gasVal);        // store value for temp
-  publisher.store("ultrasonic", dist); // store value for ultrasonic sensor
-  // publisher.store("meow", "woof");      // store value for meow
+    updateDashboard(hum, temp, gasVal, dist);
 
-  publisher.send();                     // send stored data to website
-  delay(2000);
+    #if defined(_CONSOLE_DEBUG_)
+    Serial.println(currentTime);
+    Serial.print((!status ? "ok, ": "not ok, "));
+    Serial.print(hum);
+    Serial.print(" %, ");
+    Serial.print(temp);
+    Serial.print(" F, ");
+    Serial.print("gas: ");
+    Serial.print(gasVal);
+    Serial.print(", dist: ");
+    Serial.print(dist);
+    Serial.println(" cm");
+    #endif
+    
+    if (gasVal > GAS_LIMIT) {
+      playNote(440);
+    } else {
+      noTone(buzzerPin);
+    }
+
+    publisher.store("humidity", hum);        // store value for temp
+    publisher.store("temperature", temp);        // store value for temp
+    publisher.store("gas", gasVal);        // store value for temp
+    publisher.store("ultrasonic", dist); // store value for ultrasonic sensor
+    // publisher.store("meow", "woof");      // store value for meow
+
+    publisher.send();                     // send stored data to website  
+  }
 }
