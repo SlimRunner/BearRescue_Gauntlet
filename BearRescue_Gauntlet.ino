@@ -15,7 +15,6 @@
 #include "BearRescue_Secrets.hpp"
 #include "BearRescue_Melody.hpp"
 #include "BearRescue_SoundList.hpp"
-#include "BearRescue_Toggle.hpp"
 
 constexpr int SCREEN_WIDTH = 128; // OLED display width,  in pixels
 constexpr int SCREEN_HEIGHT = 64; // OLED display height, in pixels
@@ -42,9 +41,8 @@ constexpr int buzzerPin = 12;
 constexpr int gasPin = A2;
 constexpr int trigPin = 5;
 constexpr int echoPin = 18;
-constexpr int swithPin = 15;
 
-Toggle songSwitch(swithPin);
+// the switch could not happen in time for the victory tune :(
 Melody vitoryMelody(buzzerPin, zelda2, sizeof(zelda2) / sizeof(zelda2[0]), true, 128, 32);
 Melody gasAlarm(buzzerPin, sound_alarm, sizeof(sound_alarm) / sizeof(sound_alarm[0]), true, 180, 1);
 HackPublisher publisher("BearRescue");  // publisher instance for team "hackers"
@@ -126,7 +124,6 @@ void setup() {
   while (!Serial) continue;
 
   pinMode(gasPin, INPUT);
-  pinMode(swithPin, INPUT_PULLUP);
 
   ledring.begin();
   ledring.setBrightness(RING_BRIGHTNESS);
@@ -201,9 +198,6 @@ void loop() {
 
   if (gasVal > GAS_LIMIT) {
     gasAlarm.advance();
-  } else if (songSwitch.isOn()) {
-    // needs debugging
-    vitoryMelody.advance();
   } else {
     noTone(buzzerPin);
   }
