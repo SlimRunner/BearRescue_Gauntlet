@@ -1,4 +1,7 @@
 #include <AM232X.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <Wire.h>
 #include <Adafruit_NeoPixel.h>
 
 #ifdef __AVR__
@@ -8,6 +11,10 @@
 #include "BearRescue_HackPublisher.hpp"
 #include "BearRescue_Ultrasonic.hpp"
 #include "BearRescue_Secrets.hpp"
+
+constexpr int SCREEN_WIDTH = 128; // OLED display width,  in pixels
+constexpr int SCREEN_HEIGHT = 64; // OLED display height, in pixels
+constexpr int OLED_ADDR = 0x3C;
 
 constexpr int LED_PIN = 19;
 constexpr int LED_COUNT = 12;
@@ -22,6 +29,7 @@ float C2F(int t) {
 };
 
 Adafruit_NeoPixel ledring(LED_COUNT, LED_PIN, NEO_GRB | NEO_KHZ800);
+Adafruit_SSD1306 oled(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 constexpr int buzzerPin = 12;
 constexpr int gasPin = A1;
@@ -59,6 +67,28 @@ void introMelody() {
   noTone(buzzerPin);
 }
 
+void updateDashboard(int h, int t, int g, int d) {
+  constexpr int wQuad = SCREEN_WIDTH / 4, hQuad = SCREEN_HEIGHT / 4;
+  oled.clearDisplay();
+  oled.setTextColor(WHITE);
+  oled.setTextSize(1);
+  oled.setCursor(wQuad - 8, hQuad);
+  oled.print(h);
+  oled.print("%");
+  oled.setCursor(wQuad * 3 - 8, hQuad);
+  oled.print(t);
+  oled.print("F");
+  const int gpad = 17 + (g < 1000? 0: 3);
+  oled.setCursor(wQuad - 8, hQuad * 3);
+  oled.print(g);
+  oled.print("ppm");
+  const int dpad = 11 + (d < 100? 0: (d < 1000? 3: 6));
+  oled.setCursor(wQuad * 3 - dpad, hQuad * 3);
+  oled.print(d);
+  oled.print("cm");
+  oled.display();
+}
+
 void setup() {
   #if defined(__AVR_ATtiny85__) && (F_CPU == 16000000)
     clock_prescale_set(clock_div_1);
@@ -77,13 +107,21 @@ void setup() {
   ledring.setPixelColor(5,255,128,50);
   ledring.show();
 
+  if (!oled.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    while (true)
+      ;
+  }
+
   if (!AM2320.begin()) {
     Serial.println("Sensor not found");
     while(1);
   }
 
   AM2320.wakeUp();
-  delay(200);
+  delay(200); // is this line necessary?
+
+  oled.display();
 
   // Connect to wifi
   WiFi.begin(ssid, password);
@@ -103,6 +141,8 @@ void loop() {
   status = AM2320.read();
   hum = AM2320.getHumidity();
   temp = C2F(AM2320.getTemperature());
+
+  updateDashboard(hum, temp, gasVal, dist);
 
   Serial.print((!status ? "ok, ": "not ok, "));
   Serial.print(hum);
