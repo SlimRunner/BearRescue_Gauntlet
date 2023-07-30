@@ -1,16 +1,21 @@
+// Enable the next line to print data to Serial
 // #define _CONSOLE_DEBUG_
 
-#include <AM232X.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
-#include <Wire.h>
-#include <Adafruit_NeoPixel.h>
+// collection of libraries used for several sensors
+#include <AM232X.h> // temperature sensor
+#include <Adafruit_GFX.h> // graphic library
+#include <Adafruit_SSD1306.h> // oled screen
+#include <Wire.h> // communication protocol of oled screen
+#include <Adafruit_NeoPixel.h> // led ring
 
 #ifdef __AVR__
   #include <avr/power.h>
 #endif
 
+// code provided by HAcK mentors to mesh with server
 #include "BearRescue_HackPublisher.hpp"
+
+// personal libraries I wrote myself to fascilitate managing sensors
 #include "BearRescue_Ultrasonic.hpp"
 #include "BearRescue_Secrets.hpp"
 #include "BearRescue_Melody.hpp"
@@ -29,6 +34,7 @@ constexpr int GAS_LIMIT = 1800;
 const char *ssid = SSID;
 const char *password = PASSWORD;
 
+// converts celcius to farenheit (if needed)
 float C2F(int t) {
   return t * 9 / 5 + 32;
 };
@@ -36,7 +42,7 @@ float C2F(int t) {
 Adafruit_NeoPixel ledring(LED_COUNT, LED_PIN, NEO_GRB | NEO_KHZ800);
 Adafruit_SSD1306 oled(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
-
+// pin assignment
 constexpr int buzzerPin = 12;
 constexpr int gasPin = A2;
 constexpr int trigPin = 5;
@@ -50,16 +56,19 @@ AM232X AM2320;
 // make sure ultrasonic sensor is on 5 V
 static UltrasonicSensor ultrasonic(trigPin, echoPin, DistUnit::CENTIMETERS);
 
+// sensor readout variables
 int dist;
 int gasVal;
 int status;
 int hum;
 int temp;
 
+// plays a single note continuously using equal temperament centered at 440H
 inline void playNote(int note) {
   tone(buzzerPin, pow(2, note / 12.0) * 880);
 }
 
+// changes the color of the led ring when passed variable is true
 void distanceWarning(bool makeRed) {
   static int marquee = 0;
   const int ledoff = (makeRed ? 0 : 255);
@@ -74,6 +83,7 @@ void distanceWarning(bool makeRed) {
   marquee = (marquee + 1) % LED_COUNT;
 }
 
+// melody play when code successfully reaches the main loop
 void introMelody() {
   constexpr int NOTE_DELAY = 200;
   pinMode(buzzerPin, INPUT);
@@ -92,6 +102,7 @@ void introMelody() {
   noTone(buzzerPin);
 }
 
+// updates data shown on oled screen
 void updateDashboard(int h, int t, int g, int d) {
   constexpr int wQuad = SCREEN_WIDTH / 4, hQuad = SCREEN_HEIGHT / 4;
   oled.clearDisplay();
@@ -119,7 +130,7 @@ void setup() {
     clock_prescale_set(clock_div_1);
   #endif
 
-    // Initialize serial communication
+  // Initialize serial communication
   Serial.begin(115200);
   while (!Serial) continue;
 
@@ -162,6 +173,7 @@ void loop() {
   static int mainTimeReset = 0; // should never go above 2000
   int currentTime = millis();
   
+  // delay-less polling loop
   if (currentTime - mainTimeReset > SENSOR_POLL_DELAY) {
     mainTimeReset = currentTime;
     gasVal = analogRead(gasPin);
@@ -196,6 +208,7 @@ void loop() {
     publisher.send();                     // send stored data to website  
   }
 
+  // plays melody if gas reading is too high
   if (gasVal > GAS_LIMIT) {
     gasAlarm.advance();
   } else {
