@@ -13,6 +13,9 @@
 #include "BearRescue_HackPublisher.hpp"
 #include "BearRescue_Ultrasonic.hpp"
 #include "BearRescue_Secrets.hpp"
+#include "BearRescue_Melody.hpp"
+#include "BearRescue_SoundList.hpp"
+#include "BearRescue_Toggle.hpp"
 
 constexpr int SCREEN_WIDTH = 128; // OLED display width,  in pixels
 constexpr int SCREEN_HEIGHT = 64; // OLED display height, in pixels
@@ -34,11 +37,16 @@ float C2F(int t) {
 Adafruit_NeoPixel ledring(LED_COUNT, LED_PIN, NEO_GRB | NEO_KHZ800);
 Adafruit_SSD1306 oled(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
+
 constexpr int buzzerPin = 12;
 constexpr int gasPin = A2;
 constexpr int trigPin = 5;
 constexpr int echoPin = 18;
+constexpr int swithPin = 15;
 
+Toggle songSwitch(swithPin);
+Melody vitoryMelody(buzzerPin, zelda2, sizeof(zelda2) / sizeof(zelda2[0]), true, 128, 32);
+Melody gasAlarm(buzzerPin, sound_alarm, sizeof(sound_alarm) / sizeof(sound_alarm[0]), true, 180, 1);
 HackPublisher publisher("BearRescue");  // publisher instance for team "hackers"
 AM232X AM2320;
 // make sure ultrasonic sensor is on 5 V
@@ -52,6 +60,20 @@ int temp;
 
 inline void playNote(int note) {
   tone(buzzerPin, pow(2, note / 12.0) * 880);
+}
+
+void distanceWarning(bool makeRed) {
+  static int marquee = 0;
+  const int ledoff = (makeRed ? 0 : 255);
+  for (int i = 0; i < LED_COUNT; ++i) {
+    if ( i != marquee) {
+      ledring.setPixelColor(i, 255, ledoff, ledoff);
+    } else {
+      ledring.setPixelColor(i, 0, 64, 128);
+    }
+  }
+  ledring.show();
+  marquee = (marquee + 1) % LED_COUNT;
 }
 
 void introMelody() {
@@ -104,12 +126,10 @@ void setup() {
   while (!Serial) continue;
 
   pinMode(gasPin, INPUT);
+  pinMode(swithPin, INPUT_PULLUP);
 
   ledring.begin();
   ledring.setBrightness(RING_BRIGHTNESS);
-  ledring.setPixelColor(0,255,128,50);
-  ledring.setPixelColor(2,255,128,50);
-  ledring.setPixelColor(5,255,128,50);
   ledring.show();
 
   if (!oled.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
@@ -153,6 +173,7 @@ void loop() {
     hum = AM2320.getHumidity();
     temp = AM2320.getTemperature();
 
+    distanceWarning(dist > 125);
     updateDashboard(hum, temp, gasVal, dist);
 
     #if defined(_CONSOLE_DEBUG_)
@@ -168,12 +189,6 @@ void loop() {
     Serial.print(dist);
     Serial.println(" cm");
     #endif
-    
-    if (gasVal > GAS_LIMIT) {
-      playNote(0);
-    } else {
-      noTone(buzzerPin);
-    }
 
     publisher.store("humidity", hum);        // store value for temp
     publisher.store("temperature", temp);        // store value for temp
@@ -182,5 +197,14 @@ void loop() {
     // publisher.store("meow", "woof");      // store value for meow
 
     publisher.send();                     // send stored data to website  
+  }
+
+  if (gasVal > GAS_LIMIT) {
+    gasAlarm.advance();
+  } else if (songSwitch.isOn()) {
+    // needs debugging
+    vitoryMelody.advance();
+  } else {
+    noTone(buzzerPin);
   }
 }
