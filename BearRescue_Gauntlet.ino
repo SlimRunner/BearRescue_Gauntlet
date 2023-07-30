@@ -1,8 +1,17 @@
 #include <AM232X.h>
+#include <Adafruit_NeoPixel.h>
+
+#ifdef __AVR__
+  #include <avr/power.h>
+#endif
 
 #include "BearRescue_HackPublisher.hpp"
 #include "BearRescue_Ultrasonic.hpp"
 #include "BearRescue_Secrets.hpp"
+
+constexpr int LED_PIN = 19;
+constexpr int LED_COUNT = 12;
+constexpr int RING_BRIGHTNESS = 50;
 
 const char *ssid = SSID;
 const char *password = PASSWORD;
@@ -11,6 +20,8 @@ constexpr int ledPin = 13;
 float C2F(int t) {
   return t * 9 / 5 + 32;
 };
+
+Adafruit_NeoPixel ledring(LED_COUNT, LED_PIN, NEO_GRB | NEO_KHZ800);
 
 constexpr int buzzerPin = 12;
 constexpr int gasPin = A1;
@@ -46,11 +57,22 @@ void introMelody() {
 }
 
 void setup() {
+  #if defined(__AVR_ATtiny85__) && (F_CPU == 16000000)
+    clock_prescale_set(clock_div_1);
+  #endif
+
     // Initialize serial communication
   Serial.begin(115200);
   while (!Serial) continue;
 
   pinMode(gasPin, INPUT);
+
+  ledring.begin();
+  ledring.setBrightness(RING_BRIGHTNESS);
+  ledring.setPixelColor(0,255,128,50);
+  ledring.setPixelColor(2,255,128,50);
+  ledring.setPixelColor(5,255,128,50);
+  ledring.show();
 
   if (!AM2320.begin()) {
     Serial.println("Sensor not found");
