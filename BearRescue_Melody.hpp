@@ -1,6 +1,6 @@
 #pragma once
 
-#include "BearRescue_Note.hpp"
+#include "Note.hpp"
 
 /**
  * @brief Tracks and manages a collection of Notes to play in a melody
@@ -12,6 +12,7 @@ private:
   const uint8_t m_pin;
   const int m_size;
   unsigned long m_time;
+  unsigned long m_prevTime;
   bool m_repeat;
   bool m_resume;
 
@@ -118,6 +119,7 @@ Melody::Melody(const int pin, const Note *song, int size)
       m_resume(true), m_index(0), timeScalar(32 * 128) {
   m_timeNext = m_song[m_index].duration();
   m_prevIndex = -1;
+  m_prevTime = millis();
 }
 
 Melody::Melody(const int pin, const Note *song, int size, bool repeat)
@@ -125,6 +127,7 @@ Melody::Melody(const int pin, const Note *song, int size, bool repeat)
       m_resume(true), m_index(0), timeScalar(32 * 128) {
   m_timeNext = m_song[m_index].duration();
   m_prevIndex = -1;
+  m_prevTime = millis();
 }
 
 inline Melody::Melody(const int pin, const Note *song, int size, bool repeat,
@@ -133,14 +136,17 @@ inline Melody::Melody(const int pin, const Note *song, int size, bool repeat,
       m_resume(true), m_index(0), timeScalar(baseBeat * bpm) {
   m_timeNext = m_song[m_index].duration();
   m_prevIndex = -1;
+  m_prevTime = millis();
 }
 
 inline void Melody::advance() {
   const double BEAT_UNIT = timeScalar / 60000.0;
-  static unsigned long prevTime = millis();
   unsigned long now = millis();
-  unsigned long timeDelta = now - prevTime;
-  prevTime = now;
+  if (m_prevIndex < 0) {
+    m_prevTime = now;
+  }
+  unsigned long timeDelta = now - m_prevTime;
+  m_prevTime = now;
 
   if (m_resume) {
     // prevents time jumping from a prolonged delay
